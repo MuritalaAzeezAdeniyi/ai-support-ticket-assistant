@@ -1,8 +1,8 @@
 # AI Support Ticket Assistant
 
-A beginner-friendly Python project for demonstrating AI tool/function calling and safe external actions. The planned assistant uses Gemini through `google-genai`, Pydantic validation, SQLite ticket storage, human approval for a simulated email action, idempotency, and audit logging.
+A beginner-friendly Python project being built in stages to demonstrate safe AI tool/function calling. The current implementation includes Pydantic validation, Python support-tool functions, and SQLite ticket storage with idempotent creation. AI integration, approval enforcement, audit logging, and the user interface are not implemented yet.
 
-> This repository is at the project-definition stage. Application logic and runnable commands have not been implemented yet. No real emails will be sent by this project.
+> This project does not send real emails. The support-email function only prepares a simulation description; approval enforcement is not implemented yet.
 
 ## Project documents
 
@@ -11,10 +11,12 @@ A beginner-friendly Python project for demonstrating AI tool/function calling an
 - [Architecture](docs/architecture.md)
 - [AI usage log](AI_USAGE_LOG.md)
 
-## Planned configuration
+## Ticket database configuration
 
-Configuration will use environment variables. See `.env.example` for names only. Do not commit API keys or other secrets. Gemini model availability and provider access are not guaranteed.
+Tickets are stored in a local SQLite database. By default, the database is created at `data/tickets.db` in the project directory. Set `AI_SUPPORT_TICKET_DB_PATH` to change the database file path. Tests pass temporary database paths so they do not modify the application database.
 
-## Planned tests
+## Tests
 
-Automated tests will cover schemas, tools, permissions, idempotency, and agent/provider behavior. Test and run commands will be added when application logic is implemented.
+Run the schema, tool, and storage tests with `python -m pytest tests/test_schemas.py tests/test_tools.py tests/test_storage.py -v`.
+
+The project does not currently connect to Gemini or provide approval enforcement or audit logging. Configuration names in `.env.example` are placeholders; do not commit real credentials.

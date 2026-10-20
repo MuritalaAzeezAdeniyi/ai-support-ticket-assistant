@@ -1,4 +1,4 @@
-"""Behavior tests for the in-memory support assistant tools."""
+"""Behavior tests for the SQLite-backed support assistant tools."""
 
 from datetime import datetime, timezone
 
@@ -9,33 +9,34 @@ from app.schemas import TicketCreateArgs
 from app.tools import (
 	create_support_ticket,
 	get_ticket_status,
-	reset_ticket_store,
 	simulate_support_email,
 	validate_email,
 )
 
 
-@pytest.fixture(autouse=True)
-def clean_ticket_store() -> None:
-	"""Start and finish each test with an empty ticket store."""
-	reset_ticket_store()
-	yield
-	reset_ticket_store()
+@pytest.fixture
+def database_path(tmp_path):
+	"""Give each test its own temporary SQLite file."""
+	return tmp_path / "tickets.sqlite3"
 
 
-def valid_ticket_args() -> TicketCreateArgs:
+def valid_ticket_args(**overrides: str) -> TicketCreateArgs:
+	values = {
+		"title": "Cannot sign in",
+		"description": "The password reset link does not work.",
+		"priority": "medium",
+		"idempotency_key": "test-request-1",
+	}
+	values.update(overrides)
 	return TicketCreateArgs(
-		title="Cannot sign in",
-		description="The password reset link does not work.",
-		priority="medium",
-		idempotency_key="test-request-1",
+		**values,
 	)
 
 
-def test_create_support_ticket_returns_open_ticket_with_generated_fields() -> None:
+def test_create_support_ticket_returns_open_ticket_with_generated_fields(database_path) -> None:
 	before_creation = datetime.now(timezone.utc)
 
-	ticket = create_support_ticket(valid_ticket_args())
+	ticket = create_support_ticket(valid_ticket_args(), database_path=database_path)
 
 	after_creation = datetime.now(timezone.utc)
 	assert ticket.ticket_id.startswith("TKT-")
@@ -46,24 +47,24 @@ def test_create_support_ticket_returns_open_ticket_with_generated_fields() -> No
 	assert ticket.title == "Cannot sign in"
 
 
-def test_ticket_status_can_be_retrieved_by_id() -> None:
-	ticket = create_support_ticket(valid_ticket_args())
+def test_ticket_status_can_be_retrieved_by_id(database_path) -> None:
+	ticket = create_support_ticket(valid_ticket_args(), database_path=database_path)
 
-	assert get_ticket_status(ticket.ticket_id) == "open"
+	assert get_ticket_status(ticket.ticket_id, database_path=database_path) == "open"
 
 
-def test_unknown_ticket_id_raises_predictable_error() -> None:
+def test_unknown_ticket_id_raises_predictable_error(database_path) -> None:
 	with pytest.raises(KeyError, match="Ticket not found: TKT-missing"):
-		get_ticket_status("TKT-missing")
+		get_ticket_status("TKT-missing", database_path=database_path)
 
 
 @pytest.mark.parametrize("ticket_id", ["", "   "])
-def test_invalid_ticket_id_is_rejected(ticket_id: str) -> None:
+def test_invalid_ticket_id_is_rejected(ticket_id: str, database_path) -> None:
 	with pytest.raises(ValidationError):
-		get_ticket_status(ticket_id)
+		get_ticket_status(ticket_id, database_path=database_path)
 
 
-def test_invalid_ticket_creation_arguments_are_rejected() -> None:
+def test_invalid_ticket_creation_arguments_are_rejected(database_path) -> None:
 	with pytest.raises(ValidationError):
 		create_support_ticket(
 			{
@@ -71,8 +72,36 @@ def test_invalid_ticket_creation_arguments_are_rejected() -> None:
 				"description": "Issue details",
 				"priority": "medium",
 				"idempotency_key": "test-request-2",
-			}
+			},
+			database_path=database_path,
 		)
+
+
+def test_same_key_and_details_return_original_ticket(database_path) -> None:
+	first = create_support_ticket(valid_ticket_args(), database_path=database_path)
+	retry = create_support_ticket(valid_ticket_args(), database_path=database_path)
+
+	assert retry.ticket_id == first.ticket_id
+	assert retry.created_at == first.created_at
+
+
+def test_same_key_with_different_details_fails_predictably(database_path) -> None:
+	create_support_ticket(valid_ticket_args(), database_path=database_path)
+
+	with pytest.raises(ValueError, match="different ticket details"):
+		create_support_ticket(
+			valid_ticket_args(title="Different issue"), database_path=database_path
+		)
+
+
+def test_different_keys_create_different_tickets(database_path) -> None:
+	first = create_support_ticket(valid_ticket_args(), database_path=database_path)
+	second = create_support_ticket(
+		valid_ticket_args(idempotency_key="another-request"),
+		database_path=database_path,
+	)
+
+	assert first.ticket_id != second.ticket_id
 
 
 def test_validate_email_accepts_valid_syntax() -> None:
