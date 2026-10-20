@@ -1,2 +1,2 @@
-# Dependencies will be selected when application logic is implemented.
-# No packages are installed in the project-definition stage.
+pydantic[email]>=2.0,<3.0
+pytest>=8.0,<9.0
