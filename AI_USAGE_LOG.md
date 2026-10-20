@@ -14,3 +14,10 @@
 - Added tests for audit records, sensitive-data exclusions, denied and failed actions, and audit-file write failures.
 - Updated README documentation to describe audit-log behavior and configuration.
 - No AI provider integration, real email delivery, unrelated dependencies, or Git commits were added.
+
+## Stage 7 — Gemini function calling
+
+- Integrated the official `google-genai` SDK with manually dispatched function calls for the four existing support actions.
+- Routed each model-requested action through the existing guarded permission and validation boundary; added safe provider, malformed-call, and tool-round-limit handling.
+- Added mocked Gemini tests that do not make network calls and updated the example configuration and README instructions.
+- Preserved the separate human-approval requirement for simulated email; no real email delivery, Streamlit UI, or Git commit was added.
