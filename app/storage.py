@@ -1,0 +1,1 @@
+"""SQLite storage placeholder; implementation is deferred."""

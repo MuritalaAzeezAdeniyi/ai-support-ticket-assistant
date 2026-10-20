@@ -1,0 +1,1 @@
+"""Tests for Pydantic schemas will be added with application logic."""

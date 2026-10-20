@@ -1,0 +1,1 @@
+"""Streamlit interface placeholder; implementation is deferred."""
