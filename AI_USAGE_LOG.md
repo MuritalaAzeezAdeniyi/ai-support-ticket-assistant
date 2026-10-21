@@ -21,3 +21,11 @@
 - Routed each model-requested action through the existing guarded permission and validation boundary; added safe provider, malformed-call, and tool-round-limit handling.
 - Added mocked Gemini tests that do not make network calls and updated the example configuration and README instructions.
 - Preserved the separate human-approval requirement for simulated email; no real email delivery, Streamlit UI, or Git commit was added.
+
+## Stage 8 — Streamlit UI and final integration
+
+- Implemented a chat-style Streamlit interface that invokes the existing agent and keeps messages in Streamlit session state.
+- Added a guarded ticket-status lookup, friendly error mapping, and explicit messaging that email remains denied without a separate trusted approval flow.
+- Added focused tests for session-history filtering and safe error display; declared Streamlit as a dependency.
+- Updated README setup, launch, test, feature, approval, audit, and limitation guidance; reviewed Git exclusions for local environment files, databases, audit logs, environments, and caches.
+- No live Gemini API calls, deployment configuration, real email delivery, or Git commits were performed.

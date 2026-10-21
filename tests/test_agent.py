@@ -6,6 +6,7 @@ import pytest
 
 from app.agent import AgentError, TOOL_NAMES, run_agent
 from app.permissions import HumanApproval, PermissionDeniedError
+from streamlit_app import _chat_history, friendly_error_message
 
 
 class FakeClient:
@@ -327,3 +328,27 @@ def test_tool_failure_is_not_reported_as_success_by_agent(tmp_path):
 	assert "get_ticket_status was not completed: The requested ticket was not found." in answer
 	assert "resolved" in answer
 	assert '"error_category": "ticket_not_found"' in (tmp_path / "audit.jsonl").read_text()
+
+
+def test_streamlit_history_keeps_only_valid_chat_entries():
+	state = {
+		"messages": [
+			{"role": "user", "content": "Check my ticket"},
+			{"role": "assistant", "content": "Please provide its ID."},
+			{"role": "system", "content": "hidden instruction"},
+			{"role": "user", "content": 17},
+		],
+		"GEMINI_API_KEY": "must-not-be-copied",
+	}
+
+	assert _chat_history(state) == state["messages"][:2]
+	assert all("GEMINI_API_KEY" not in message for message in _chat_history(state))
+
+
+def test_streamlit_safe_error_mapping_hides_provider_details():
+	error = AgentError("provider_error", "internal token=secret")
+
+	message = friendly_error_message(error)
+
+	assert "Gemini" in message
+	assert "secret" not in message

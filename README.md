@@ -1,6 +1,6 @@
 # AI Support Ticket Assistant
 
-A beginner-friendly Python project demonstrating safe AI tool/function calling. The current implementation includes Gemini function calling, Pydantic validation, support tools, SQLite ticket storage with idempotent creation, application-level permissions and approval, and JSON Lines audit logging. The Streamlit interface is not implemented yet.
+A beginner-friendly Python project demonstrating safe AI tool/function calling. It includes a Streamlit chat UI, Gemini function calling, Pydantic validation, support tools, SQLite ticket storage with idempotent creation, application-level permissions, and JSON Lines audit logging.
 
 > This project does not send real emails. The support-email function only prepares a simulation description, and execution requires an application-controlled human approval decision.
 
@@ -23,6 +23,18 @@ Copy `.env.example` to `.env` and set `GEMINI_API_KEY` to a Gemini Developer API
 
 `python-dotenv` loads a local `.env`; existing process environment variables take precedence. You can also set the variables directly in your shell.
 
+## Run the Streamlit application
+
+From the project root in Windows PowerShell, activate the project's virtual environment (if it is not already active), install dependencies, and start Streamlit:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+The chat history is kept in Streamlit session state for ordinary reruns. The sidebar includes a direct ticket-status lookup through the existing guarded action dispatcher. If Gemini is not configured or a request fails, the UI displays a friendly message without stack traces or credentials.
+
 ## Gemini function-calling flow
 
 Run one request from the project root:
@@ -33,11 +45,11 @@ python -m app.agent "Please create a ticket about the login page failing"
 
 Gemini receives declarations for only `create_support_ticket`, `get_ticket_status`, `validate_email`, and `simulate_support_email`. Automatic SDK function execution is disabled. The application validates each model-requested call in Python and sends it through `execute_action()` in `app/permissions.py`; that boundary applies permission checks, Pydantic validation, SQLite/idempotency, and audit logging. Tool outcomes are returned to Gemini, which can then produce the final response. Provider failures are reported safely, and the agent does not blindly retry tools.
 
-The email action remains a simulation and requires a separate application-controlled `HumanApproval` decision. The model cannot approve itself, and the command-line entry point has no human approval interface, so email requests through the CLI are denied by default. Approval must be supplied by trusted application code; a conversational statement from the model or an `approved` tool argument is never approval.
+The email action remains a simulation and requires a separate application-controlled `HumanApproval` decision. The model cannot approve itself. Neither the Streamlit UI nor the command-line entry point currently provides a trusted human approval workflow, so email requests are denied by default. Approval must be supplied by trusted application code; a conversational statement from the model or an `approved` tool argument is never approval.
 
 ## Tests
 
-Run the complete automated suite with:
+Run the complete automated suite with the project virtual environment active:
 
 ```powershell
 python -m pytest tests -v
@@ -55,4 +67,4 @@ Tool execution successes and failures, permission denials, and human approval de
 
 Audit entries include a UTC timestamp, action, outcome, and—when relevant—a safe error category or ticket ID. They deliberately exclude API keys and credentials, raw request payloads, full ticket descriptions, and full email contents. The guarded `execute_action()` path raises safe `ActionExecutionError` exceptions with a stable category for invalid arguments, missing tickets, idempotency conflicts, and unexpected tool errors. Permission denials remain `PermissionDeniedError` exceptions. If the audit file cannot be written, the application raises an explicit audit error rather than silently ignoring the problem; if the action itself already completed, the message warns that its success could not be recorded and should be verified before retrying.
 
-The audit log remains `data/audit.jsonl` by default and can be moved with `AI_SUPPORT_TICKET_AUDIT_PATH`. Gemini model availability, rate limits, network access, and account configuration are external dependencies; no real email is sent.
+The audit log remains `data/audit.jsonl` by default and can be moved with `AI_SUPPORT_TICKET_AUDIT_PATH`. The SQLite database defaults to `data/tickets.db` and can be moved with `AI_SUPPORT_TICKET_DB_PATH`. Gemini model availability, rate limits, network access, and account configuration are external dependencies. No real email is sent, and deployment has not been configured.
